@@ -10,12 +10,15 @@ const dataDisplay = document.getElementById('dataDisplay');
 const mockGroup = document.getElementById('mockGroup');
 
 let isConnected = false;
-let pollingInterval = null;
 
 // Initialize
 async function init() {
     await loadPorts();
-    await checkStatusAndFilename();
+
+    // Default to current timestamp if not set
+    if (!filenameInput.value) {
+        filenameInput.value = getFormattedTimestamp();
+    }
 }
 
 // Generate YYYYMMDDHHmm timestamp
@@ -29,59 +32,14 @@ function getFormattedTimestamp() {
     return `${year}${month}${day}${hour}${minute}`;
 }
 
-// Check server status and load filename
-async function checkStatusAndFilename() {
-    try {
-        const response = await fetch('/api/status');
-        if (response.ok) {
-            const status = await response.json();
-
-            // Update connection state
-            setConnectedState(status.isConnected);
-            if (status.isConnected && status.port) {
-                // If connected, select the port in dropdown if available
-                portSelect.value = status.port;
-            }
-
-            // Filename logic
-            if (status.isConnected) {
-                // If connected, show the active filename
-                filenameInput.value = status.filename;
-            } else {
-                // If not connected, propose a new fresh filename (current timestamp)
-                filenameInput.value = getFormattedTimestamp();
-            }
-        } else {
-            // Fallback if status endpoint fails (e.g. older server version)
-            loadFilename();
-            // Default to not connected
-            setConnectedState(false);
-        }
-    } catch (err) {
-        console.error('Failed to load status:', err);
-        // Fallback
-        filenameInput.value = getFormattedTimestamp();
-    }
-}
-
-// Legacy load filename (fallback)
-async function loadFilename() {
-    try {
-        const response = await fetch('/api/filename');
-        const result = await response.json();
-        if (result.filename) {
-            filenameInput.value = result.filename;
-        }
-    } catch (err) {
-        console.error('Failed to load filename:', err);
-    }
-}
-
 // Load available serial ports
 async function loadPorts() {
     try {
         const response = await fetch('/api/ports');
         const ports = await response.json();
+
+        // Preserve selection if possible
+        const currentSelection = portSelect.value;
 
         portSelect.innerHTML = '<option value="">Select Port</option>';
         ports.forEach(port => {
@@ -90,41 +48,36 @@ async function loadPorts() {
             option.textContent = `${port.path} ${port.manufacturer || ''}`;
             portSelect.appendChild(option);
         });
+
+        if (currentSelection) {
+            portSelect.value = currentSelection;
+        }
     } catch (err) {
         console.error('Failed to load ports:', err);
     }
 }
 
-// Set Filename
-setFilenameBtn.addEventListener('click', async () => {
+// Set Filename Button (Logic mostly client-side now)
+setFilenameBtn.addEventListener('click', () => {
     const filename = filenameInput.value;
     if (!filename) return alert('Please enter a filename');
-
-    try {
-        const response = await fetch('/api/filename', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ filename })
-        });
-        const result = await response.json();
-        alert(result.message + ': ' + result.filename);
-    } catch (err) {
-        console.error('Error setting filename:', err);
-    }
+    alert('Filename set for this session: ' + filename);
 });
 
 // Connect
 connectBtn.addEventListener('click', async () => {
     const path = portSelect.value;
     const baudRate = baudRateSelect.value;
+    const filename = filenameInput.value;
 
     if (!path) return alert('Please select a port');
+    if (!filename) return alert('Please enter a filename');
 
     try {
         const response = await fetch('/api/connect', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ path, baudRate })
+            body: JSON.stringify({ path, baudRate, filename })
         });
 
         if (response.ok) {
@@ -142,8 +95,15 @@ connectBtn.addEventListener('click', async () => {
 
 // Disconnect
 disconnectBtn.addEventListener('click', async () => {
+    const path = portSelect.value;
+    if (!path) return;
+
     try {
-        const response = await fetch('/api/disconnect', { method: 'POST' });
+        const response = await fetch('/api/disconnect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ path })
+        });
         if (response.ok) {
             setConnectedState(false);
         }
@@ -155,13 +115,16 @@ disconnectBtn.addEventListener('click', async () => {
 // Send Mock Data
 sendMockBtn.addEventListener('click', async () => {
     const data = mockInput.value;
+    const filename = filenameInput.value;
+
     if (!data) return;
+    if (!filename) return alert('Please enter a filename to log mock data to.');
 
     try {
         await fetch('/api/mock', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data })
+            body: JSON.stringify({ data, filename })
         });
         mockInput.value = ''; // Clear input
         // Immediate fetch to show update
@@ -176,31 +139,29 @@ function setConnectedState(connected) {
     isConnected = connected;
     connectBtn.disabled = connected;
     disconnectBtn.disabled = !connected;
+
+    // We allow changing ports only when disconnected
     portSelect.disabled = connected;
     baudRateSelect.disabled = connected;
 
-    // Determine if mock data should be allowed. 
-    // Requirement says: "mock data... if status is disconnect"
-    // So we enable mock group only if NOT connected? 
-    // Usually mock is for testing, so let's follow requirement strictly.
+    // Mock group display
     if (!connected) {
         mockGroup.style.display = 'block';
     } else {
         mockGroup.style.display = 'none';
-        // Or specific requirement: "textbox for mock data if status is disconnect"
     }
 }
 
 // Poll Data
 async function fetchData() {
+    const filename = filenameInput.value;
+    if (!filename) return;
+
     try {
-        const response = await fetch('/api/data');
+        const response = await fetch(`/api/data?filename=${encodeURIComponent(filename)}`);
         const result = await response.json();
         if (result.content !== undefined) {
-            // Only update if content changed to avoid cursor jumping if we were editing (but it's a pre tag)
-            // For simple display, just replace
             dataDisplay.textContent = result.content;
-            // Auto scroll to bottom
             dataDisplay.scrollTop = dataDisplay.scrollHeight;
         }
     } catch (err) {
