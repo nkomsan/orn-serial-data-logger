@@ -151,6 +151,29 @@ app.get('/api/status', (req, res) => {
     });
 });
 
+// API: Serve .txt logs securely from root
+app.get('/:filename', (req, res, next) => {
+    const filename = req.params.filename;
+    // Only serve .txt files
+    if (filename.endsWith('.txt')) {
+        const filePath = path.join(__dirname, filename);
+        // Basic security: avoid directory traversal
+        if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+            return res.status(400).send('Invalid filename.');
+        }
+
+        if (fs.existsSync(filePath)) {
+            res.sendFile(filePath);
+        } else {
+            // Pass to next middleware (404) if not found, or handle here
+            res.status(404).send('File not found.');
+        }
+    } else {
+        // Not a txt file, pass to next middleware (e.g., could be another route or 404)
+        next();
+    }
+});
+
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
     console.log(`Default filename: ${currentFilename}`);
