@@ -1,0 +1,115 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f4f9;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+    margin: 0;
+}
+
+.container {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 800px;
+}
+
+h1 {
+    text-align: center;
+    color: #2c3e50;
+    margin-bottom: 30px;
+}
+
+.control-panel {
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: #ecf0f1;
+    border-radius: 6px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.form-group label {
+    font-weight: bold;
+    min-width: 100px;
+}
+
+input[type="text"], select {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    flex-grow: 1;
+}
+
+button {
+    padding: 8px 15px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #2980b9;
+}
+
+button:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+}
+
+.display-panel {
+    border: 1px solid #ddd;
+    padding: 20px;
+    border-radius: 6px;
+    background-color: #fafafa;
+    min-height: 200px;
+}
+
+.display-panel h2 {
+    margin-top: 0;
+    font-size: 1.2em;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+pre#dataDisplay {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: 'Consolas', 'Monaco', monospace;
+    background-color: #2c3e50;
+    color: #2ecc71;
+    padding: 15px;
+    border-radius: 4px;
+    height: 300px;
+    overflow-y: auto;
+}
+
+.mock-group {
+    border-top: 1px dashed #ccc;
+    padding-top: 15px;
+    margin-top: 15px;
+}
+
+.input-row {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+.baud-rate-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
